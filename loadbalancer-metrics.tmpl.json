@@ -1,0 +1,187 @@
+{
+  "Comment": "Fetch Hetzner Load Balancer metrics and store in CloudWatch",
+  "QueryLanguage": "JSONata",
+  "StartAt": "Initialize",
+  "States": {
+    "Initialize": {
+      "Type": "Pass",
+      "Next": "FetchAndStoreMetrics",
+      "Assign": {
+        "loadbalancer_id": "${loadbalancer_id}",
+        "end_time": "{% $now() %}",
+        "start_time": "{% $fromMillis($toMillis($now()) - 300000) %}",
+        "connection_arn": "${connection_arn}"
+      }
+    },
+    "FetchAndStoreMetrics": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "FetchOpenConnections",
+          "States": {
+            "FetchOpenConnections": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::http:invoke",
+              "Arguments": {
+                "Method": "GET",
+                "ApiEndpoint": "{% 'https://api.hetzner.cloud/v1/load_balancers/' & $string($loadbalancer_id) & '/metrics' %}",
+                "QueryParameters": {
+                  "type": "open_connections",
+                  "start": "{% $start_time %}",
+                  "end": "{% $end_time %}",
+                  "step": "60"
+                },
+                "InvocationConfig": {
+                  "ConnectionArn": "{% $connection_arn %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "BackoffRate": 2,
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "StoreOpenConnections"
+            },
+            "StoreOpenConnections": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricData",
+              "Arguments": {
+                "Namespace": "HetznerLoadBalancer",
+                "MetricData": "{% $states.input.ResponseBody.metrics.time_series.open_connections.values ~> $map(function($v) { { 'MetricName': 'OpenConnections', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'None', 'Dimensions': [{ 'Name': 'LoadBalancerId', 'Value': $string($loadbalancer_id) }] } }) %}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "FetchConnectionsPerSecond",
+          "States": {
+            "FetchConnectionsPerSecond": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::http:invoke",
+              "Arguments": {
+                "Method": "GET",
+                "ApiEndpoint": "{% 'https://api.hetzner.cloud/v1/load_balancers/' & $string($loadbalancer_id) & '/metrics' %}",
+                "QueryParameters": {
+                  "type": "connections_per_second",
+                  "start": "{% $start_time %}",
+                  "end": "{% $end_time %}",
+                  "step": "60"
+                },
+                "InvocationConfig": {
+                  "ConnectionArn": "{% $connection_arn %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "BackoffRate": 2,
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "StoreConnectionsPerSecond"
+            },
+            "StoreConnectionsPerSecond": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricData",
+              "Arguments": {
+                "Namespace": "HetznerLoadBalancer",
+                "MetricData": "{% $states.input.ResponseBody.metrics.time_series.connections_per_second.values ~> $map(function($v) { { 'MetricName': 'ConnectionsPerSecond', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'None', 'Dimensions': [{ 'Name': 'LoadBalancerId', 'Value': $string($loadbalancer_id) }] } }) %}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "FetchRequestsPerSecond",
+          "States": {
+            "FetchRequestsPerSecond": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::http:invoke",
+              "Arguments": {
+                "Method": "GET",
+                "ApiEndpoint": "{% 'https://api.hetzner.cloud/v1/load_balancers/' & $string($loadbalancer_id) & '/metrics' %}",
+                "QueryParameters": {
+                  "type": "requests_per_second",
+                  "start": "{% $start_time %}",
+                  "end": "{% $end_time %}",
+                  "step": "60"
+                },
+                "InvocationConfig": {
+                  "ConnectionArn": "{% $connection_arn %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "BackoffRate": 2,
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "StoreRequestsPerSecond"
+            },
+            "StoreRequestsPerSecond": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricData",
+              "Arguments": {
+                "Namespace": "HetznerLoadBalancer",
+                "MetricData": "{% $states.input.ResponseBody.metrics.time_series.requests_per_second.values ~> $map(function($v) { { 'MetricName': 'RequestsPerSecond', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'None', 'Dimensions': [{ 'Name': 'LoadBalancerId', 'Value': $string($loadbalancer_id) }] } }) %}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "FetchBandwidth",
+          "States": {
+            "FetchBandwidth": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::http:invoke",
+              "Arguments": {
+                "Method": "GET",
+                "ApiEndpoint": "{% 'https://api.hetzner.cloud/v1/load_balancers/' & $string($loadbalancer_id) & '/metrics' %}",
+                "QueryParameters": {
+                  "type": "bandwidth",
+                  "start": "{% $start_time %}",
+                  "end": "{% $end_time %}",
+                  "step": "60"
+                },
+                "InvocationConfig": {
+                  "ConnectionArn": "{% $connection_arn %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "BackoffRate": 2,
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "StoreBandwidth"
+            },
+            "StoreBandwidth": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricData",
+              "Arguments": {
+                "Namespace": "HetznerLoadBalancer",
+                "MetricData": "{% $append($states.input.ResponseBody.metrics.time_series.'bandwidth.in'.values ~> $map(function($v) { { 'MetricName': 'BandwidthIn', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'None', 'Dimensions': [{ 'Name': 'LoadBalancerId', 'Value': $string($loadbalancer_id) }] } }), $states.input.ResponseBody.metrics.time_series.'bandwidth.out'.values ~> $map(function($v) { { 'MetricName': 'BandwidthOut', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'None', 'Dimensions': [{ 'Name': 'LoadBalancerId', 'Value': $string($loadbalancer_id) }] } })) %}"
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}
