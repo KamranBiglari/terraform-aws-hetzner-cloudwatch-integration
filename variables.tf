@@ -64,5 +64,4 @@ variable "metric_type" {
 variable "data" {
   description = "value"
   type        = map(string)
-  default     = {}
 }
