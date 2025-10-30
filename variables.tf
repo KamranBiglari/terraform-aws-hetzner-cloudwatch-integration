@@ -34,10 +34,10 @@ variable "create_role" {
   default     = true
 }
 
-variable "role_name" {
-  description = "Name of the IAM role"
+variable "role_prefix" {
+  description = "Prefix for the IAM role"
   type        = string
-  default     = "test_role"
+  default     = "hetzner-cloudwatch"
 }
 
 variable "role_arn" {
@@ -64,4 +64,9 @@ variable "metric_type" {
 variable "data" {
   description = "value"
   type        = map(string)
+}
+
+variable "name" {
+  description = "Name of application"
+  type = string
 }
