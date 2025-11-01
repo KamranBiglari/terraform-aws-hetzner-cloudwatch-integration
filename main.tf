@@ -72,7 +72,7 @@ resource "aws_iam_role_policy" "sfn" {
         Resource = "*"
         Condition = {
           StringEquals = {
-            "cloudwatch:namespace" = "HetznerLoadBalancer"
+            "cloudwatch:namespace" = ["HetznerLoadBalancer", "HetznerServer"]
           }
         }
       }
@@ -82,7 +82,7 @@ resource "aws_iam_role_policy" "sfn" {
 
 resource "aws_sfn_state_machine" "this" {
   count    = var.create ? 1 : 0
-  name     = "${var.name}"
+  name     = var.name
   type     = "EXPRESS"
   role_arn = var.create_role ? aws_iam_role.sfn[0].arn : var.role_arn
 
@@ -94,4 +94,55 @@ resource "aws_sfn_state_machine" "this" {
       var.data
     )
   )
+}
+
+# Scheduler resources
+resource "aws_iam_role" "scheduler" {
+  count = var.create && var.create_scheduler && var.create_scheduler_role ? 1 : 0
+  name  = "${var.role_prefix}-scheduler-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Principal = {
+        Service = "scheduler.amazonaws.com"
+      }
+      Action = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy" "scheduler" {
+  count = var.create && var.create_scheduler && var.create_scheduler_role ? 1 : 0
+  name  = "${var.role_prefix}-scheduler-policy"
+  role  = aws_iam_role.scheduler[0].id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = "states:StartExecution"
+      Resource = aws_sfn_state_machine.this[0].arn
+    }]
+  })
+}
+
+resource "aws_scheduler_schedule" "this" {
+  count      = var.create && var.create_scheduler ? 1 : 0
+  name       = "${var.name}-schedule"
+  group_name = "default"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  schedule_expression = var.schedule_expression
+
+  target {
+    arn      = aws_sfn_state_machine.this[0].arn
+    role_arn = var.create_scheduler_role ? aws_iam_role.scheduler[0].arn : var.scheduler_role_arn
+
+    input = jsonencode({})
+  }
 }

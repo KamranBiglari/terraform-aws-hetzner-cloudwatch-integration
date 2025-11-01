@@ -13,18 +13,18 @@ provider "aws" {
   region = "us-east-1"
 }
 
-module "loadbalancer_metrics" {
+module "server_metrics" {
   source = "../.."
 
   hetzner_cloud_api_token = var.hetzner_cloud_api_token
-  metric_type             = "loadbalancer"
-  name                    = "hetzner-lb-metrics"
+  metric_type             = "server"
+  name                    = "hetzner-server-metrics"
 
   # Enable scheduler to automatically collect metrics every 5 minutes
   create_scheduler    = true
   schedule_expression = "rate(5 minutes)"
 
   data = {
-    loadbalancer_id = var.loadbalancer_id
+    server_id = var.server_id
   }
 }

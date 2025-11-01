@@ -68,5 +68,30 @@ variable "data" {
 
 variable "name" {
   description = "Name of application"
-  type = string
+  type        = string
+}
+
+# Scheduler variables
+variable "create_scheduler" {
+  description = "Controls whether the EventBridge Scheduler should be created"
+  type        = bool
+  default     = false
+}
+
+variable "schedule_expression" {
+  description = "Schedule expression for the EventBridge Scheduler (e.g., 'rate(5 minutes)')"
+  type        = string
+  default     = "rate(5 minutes)"
+}
+
+variable "create_scheduler_role" {
+  description = "Controls whether the IAM role for the scheduler should be created"
+  type        = bool
+  default     = true
+}
+
+variable "scheduler_role_arn" {
+  description = "ARN of an existing IAM role for the scheduler. Required if create_scheduler_role is false"
+  type        = string
+  default     = null
 }

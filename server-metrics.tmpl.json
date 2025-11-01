@@ -1,0 +1,146 @@
+{
+  "Comment": "Fetch Hetzner Server metrics and store in CloudWatch",
+  "QueryLanguage": "JSONata",
+  "StartAt": "Initialize",
+  "States": {
+    "Initialize": {
+      "Type": "Pass",
+      "Next": "FetchAndStoreMetrics",
+      "Assign": {
+        "server_id": "${server_id}",
+        "end_time": "{% $now() %}",
+        "start_time": "{% $fromMillis($toMillis($now()) - 300000) %}",
+        "connection_arn": "${connection_arn}"
+      }
+    },
+    "FetchAndStoreMetrics": {
+      "Type": "Parallel",
+      "End": true,
+      "Branches": [
+        {
+          "StartAt": "FetchCPU",
+          "States": {
+            "FetchCPU": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::http:invoke",
+              "Arguments": {
+                "Method": "GET",
+                "ApiEndpoint": "{% 'https://api.hetzner.cloud/v1/servers/' & $string($server_id) & '/metrics' %}",
+                "QueryParameters": {
+                  "type": "cpu",
+                  "start": "{% $start_time %}",
+                  "end": "{% $end_time %}",
+                  "step": "60"
+                },
+                "InvocationConfig": {
+                  "ConnectionArn": "{% $connection_arn %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "BackoffRate": 2,
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "StoreCPU"
+            },
+            "StoreCPU": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricData",
+              "Arguments": {
+                "Namespace": "HetznerServer",
+                "MetricData": "{% $states.input.ResponseBody.metrics.time_series.cpu.values ~> $map(function($v) { { 'MetricName': 'CPU', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Percent', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } }) %}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "FetchDisk",
+          "States": {
+            "FetchDisk": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::http:invoke",
+              "Arguments": {
+                "Method": "GET",
+                "ApiEndpoint": "{% 'https://api.hetzner.cloud/v1/servers/' & $string($server_id) & '/metrics' %}",
+                "QueryParameters": {
+                  "type": "disk",
+                  "start": "{% $start_time %}",
+                  "end": "{% $end_time %}",
+                  "step": "60"
+                },
+                "InvocationConfig": {
+                  "ConnectionArn": "{% $connection_arn %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "BackoffRate": 2,
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "StoreDisk"
+            },
+            "StoreDisk": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricData",
+              "Arguments": {
+                "Namespace": "HetznerServer",
+                "MetricData": "{% $append($states.input.ResponseBody.metrics.time_series.'disk.0.iops.read'.values ~> $map(function($v) { { 'MetricName': 'DiskIOPSRead', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Count/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } }), $states.input.ResponseBody.metrics.time_series.'disk.0.iops.write'.values ~> $map(function($v) { { 'MetricName': 'DiskIOPSWrite', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Count/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } })) ~> $append($states.input.ResponseBody.metrics.time_series.'disk.0.bandwidth.read'.values ~> $map(function($v) { { 'MetricName': 'DiskBandwidthRead', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Bytes/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } })) ~> $append($states.input.ResponseBody.metrics.time_series.'disk.0.bandwidth.write'.values ~> $map(function($v) { { 'MetricName': 'DiskBandwidthWrite', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Bytes/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } })) %}"
+              },
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "FetchNetwork",
+          "States": {
+            "FetchNetwork": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::http:invoke",
+              "Arguments": {
+                "Method": "GET",
+                "ApiEndpoint": "{% 'https://api.hetzner.cloud/v1/servers/' & $string($server_id) & '/metrics' %}",
+                "QueryParameters": {
+                  "type": "network",
+                  "start": "{% $start_time %}",
+                  "end": "{% $end_time %}",
+                  "step": "60"
+                },
+                "InvocationConfig": {
+                  "ConnectionArn": "{% $connection_arn %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": ["States.ALL"],
+                  "BackoffRate": 2,
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "Next": "StoreNetwork"
+            },
+            "StoreNetwork": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::aws-sdk:cloudwatch:putMetricData",
+              "Arguments": {
+                "Namespace": "HetznerServer",
+                "MetricData": "{% $append($states.input.ResponseBody.metrics.time_series.'network.0.bandwidth.in'.values ~> $map(function($v) { { 'MetricName': 'NetworkBandwidthIn', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Bytes/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } }), $states.input.ResponseBody.metrics.time_series.'network.0.bandwidth.out'.values ~> $map(function($v) { { 'MetricName': 'NetworkBandwidthOut', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Bytes/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } })) ~> $append($states.input.ResponseBody.metrics.time_series.'network.0.pps.in'.values ~> $map(function($v) { { 'MetricName': 'NetworkPacketsIn', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Count/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } })) ~> $append($states.input.ResponseBody.metrics.time_series.'network.0.pps.out'.values ~> $map(function($v) { { 'MetricName': 'NetworkPacketsOut', 'Value': $number($v[1]), 'Timestamp': $fromMillis($number($v[0]) * 1000), 'Unit': 'Count/Second', 'Dimensions': [{ 'Name': 'ServerId', 'Value': $string($server_id) }] } })) %}"
+              },
+              "End": true
+            }
+          }
+        }
+      ]
+    }
+  }
+}
