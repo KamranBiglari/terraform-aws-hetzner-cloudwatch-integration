@@ -3,7 +3,7 @@
 This Terraform module enables seamless integration between Hetzner Cloud resources and AWS CloudWatch, allowing you to monitor your Hetzner infrastructure using AWS CloudWatch metrics.
 
 
-![image](images/cloudwatch-metrics.png)
+![image](https://raw.githubusercontent.com/KamranBiglari/terraform-aws-hetzner-cloudwatch-integration/main/images/cloudwatch-metrics.png)
 
 ## Features
 
