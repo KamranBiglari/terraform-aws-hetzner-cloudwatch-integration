@@ -283,8 +283,11 @@ No modules.
 | Name | Type |
 |------|------|
 | [aws_cloudwatch_event_connection.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_connection) | resource |
+| [aws_iam_role.scheduler](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.sfn](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role_policy.scheduler](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy.sfn](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_scheduler_schedule.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/scheduler_schedule) | resource |
 | [aws_sfn_state_machine.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sfn_state_machine) | resource |
 
 ## Inputs
@@ -294,6 +297,8 @@ No modules.
 | <a name="input_create"></a> [create](#input\_create) | Controls whether resources should be created | `bool` | `true` | no |
 | <a name="input_create_event_connection"></a> [create\_event\_connection](#input\_create\_event\_connection) | Controls whether the event connection should be created | `bool` | `true` | no |
 | <a name="input_create_role"></a> [create\_role](#input\_create\_role) | Controls whether the IAM role should be created | `bool` | `true` | no |
+| <a name="input_create_scheduler"></a> [create\_scheduler](#input\_create\_scheduler) | Controls whether the EventBridge Scheduler should be created | `bool` | `false` | no |
+| <a name="input_create_scheduler_role"></a> [create\_scheduler\_role](#input\_create\_scheduler\_role) | Controls whether the IAM role for the scheduler should be created | `bool` | `true` | no |
 | <a name="input_data"></a> [data](#input\_data) | value | `map(string)` | n/a | yes |
 | <a name="input_event_connection_arn"></a> [event\_connection\_arn](#input\_event\_connection\_arn) | ARN of the event connection | `string` | `null` | no |
 | <a name="input_event_connection_name"></a> [event\_connection\_name](#input\_event\_connection\_name) | Name of the event connection | `string` | `null` | no |
@@ -302,8 +307,17 @@ No modules.
 | <a name="input_name"></a> [name](#input\_name) | Name of application | `string` | n/a | yes |
 | <a name="input_role_arn"></a> [role\_arn](#input\_role\_arn) | ARN of the IAM role | `string` | `null` | no |
 | <a name="input_role_prefix"></a> [role\_prefix](#input\_role\_prefix) | Prefix for the IAM role | `string` | `"hetzner-cloudwatch"` | no |
+| <a name="input_schedule_expression"></a> [schedule\_expression](#input\_schedule\_expression) | Schedule expression for the EventBridge Scheduler (e.g., 'rate(5 minutes)') | `string` | `"rate(5 minutes)"` | no |
+| <a name="input_scheduler_role_arn"></a> [scheduler\_role\_arn](#input\_scheduler\_role\_arn) | ARN of an existing IAM role for the scheduler. Required if create\_scheduler\_role is false | `string` | `null` | no |
 
 ## Outputs
 
-No outputs.
+| Name | Description |
+|------|-------------|
+| <a name="output_event_connection_arn"></a> [event\_connection\_arn](#output\_event\_connection\_arn) | ARN of the EventBridge connection |
+| <a name="output_iam_role_arn"></a> [iam\_role\_arn](#output\_iam\_role\_arn) | ARN of the IAM role used by the state machine |
+| <a name="output_scheduler_role_arn"></a> [scheduler\_role\_arn](#output\_scheduler\_role\_arn) | ARN of the IAM role used by the scheduler |
+| <a name="output_scheduler_schedule_arn"></a> [scheduler\_schedule\_arn](#output\_scheduler\_schedule\_arn) | ARN of the EventBridge Scheduler schedule |
+| <a name="output_state_machine_arn"></a> [state\_machine\_arn](#output\_state\_machine\_arn) | ARN of the Step Functions state machine |
+| <a name="output_state_machine_name"></a> [state\_machine\_name](#output\_state\_machine\_name) | Name of the Step Functions state machine |
 <!-- END_TF_DOCS -->
